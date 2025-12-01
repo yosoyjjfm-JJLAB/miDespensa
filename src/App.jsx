@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Minus,
-  Trash2, 
-  AlertCircle,
-  Search,
-  Package,
-  Share2
-} from 'lucide-react';
-// IMPORTANTE: Agregamos getApps y getApp para evitar el choque
+// ELIMINAMOS LUCIDE PARA EVITAR ERRORES
+// Usaremos Emojis en su lugar
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -26,7 +18,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 
-// --- TUS CREDENCIALES (CONFIRMADAS QUE FUNCIONAN) ---
+// --- TUS CREDENCIALES ---
 const firebaseConfig = {
   apiKey: "AIzaSyCzDDTTpZMHT13H58ud2LBNgPRvVackZd4",
   authDomain: "seguimientoproyectos-a9644.firebaseapp.com",
@@ -36,13 +28,10 @@ const firebaseConfig = {
   appId: "1:904852309784:web:7f5b2e811df62ce534406d"
 };
 
-// --- PROTECCIÓN ANTI-CHOQUE (SINGLETON) ---
-// Si la app ya existe, la usa. Si no, la crea.
+// --- INICIALIZACIÓN SEGURA ---
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-// ID único para esta app
 const appId = "mi-despensa-hogar"; 
 
 // --- COMPONENTES ---
@@ -66,18 +55,17 @@ const ProductCard = ({ item, onUpdateQuantity, onDelete }) => {
           <div className="flex items-center gap-1 text-xs text-slate-500">
             <span>Mínimo ideal: {minQty}</span>
             {isLowStock && (
-              <span className="flex items-center text-red-600 font-bold ml-1 bg-red-100 px-2 py-0.5 rounded-full">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                ¡Comprar!
+              <span className="text-red-600 font-bold ml-1 bg-red-100 px-2 py-0.5 rounded-full">
+                ⚠️ ¡Comprar!
               </span>
             )}
           </div>
         </div>
         <button 
           onClick={() => onDelete(item.id)}
-          className="text-slate-300 hover:text-red-400 p-1"
+          className="text-slate-400 hover:text-red-500 text-xl"
         >
-          <Trash2 className="w-5 h-5" />
+          🗑️
         </button>
       </div>
 
@@ -87,9 +75,9 @@ const ProductCard = ({ item, onUpdateQuantity, onDelete }) => {
           <button 
             onClick={() => onUpdateQuantity(item.id, qty - 1)}
             disabled={qty <= 0}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-30 active:scale-90 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-30 active:scale-90 transition-all font-bold"
           >
-            <Minus className="w-4 h-4" />
+            ➖
           </button>
           
           <span className={`text-xl font-bold w-8 text-center ${isLowStock ? 'text-red-600' : 'text-slate-700'}`}>
@@ -98,9 +86,9 @@ const ProductCard = ({ item, onUpdateQuantity, onDelete }) => {
 
           <button 
             onClick={() => onUpdateQuantity(item.id, qty + 1)}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 active:scale-90 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 active:scale-90 transition-all font-bold"
           >
-            <Plus className="w-4 h-4" />
+            ➕
           </button>
         </div>
       </div>
@@ -115,7 +103,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('list');
   const [filterText, setFilterText] = useState('');
 
-  // Estados para nuevo item
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState(1);
   const [newMin, setNewMin] = useState(2);
@@ -131,7 +118,6 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-
     const pantryRef = collection(db, 'artifacts', appId, 'public', 'pantry_items');
     
     const unsubscribe = onSnapshot(pantryRef, (snapshot) => {
@@ -140,7 +126,6 @@ export default function App() {
         ...doc.data()
       }));
       
-      // Ordenamiento seguro
       list.sort((a, b) => {
         const qtyA = a.quantity || 0;
         const qtyB = b.quantity || 0;
@@ -207,12 +192,10 @@ export default function App() {
 
   const copyShoppingList = () => {
     const toBuy = items.filter(i => (i.quantity || 0) <= (i.minQuantity || 0));
-    
     if (toBuy.length === 0) {
       alert("¡Todo está bien surtido!");
       return;
     }
-
     let text = "🛒 *LISTA DE COMPRAS*\n\n";
     toBuy.forEach(item => {
       const q = item.quantity || 0;
@@ -220,42 +203,35 @@ export default function App() {
       const missing = (m - q) + 1;
       text += `[ ] ${item.name} (Faltan: ${missing})\n`;
     });
-
-    navigator.clipboard.writeText(text).then(() => {
-      alert("📋 ¡Lista copiada!");
-    });
+    navigator.clipboard.writeText(text).then(() => alert("📋 ¡Lista copiada!"));
   };
 
   const filteredItems = items.filter(i => 
     (i.name || '').toLowerCase().includes(filterText.toLowerCase())
   );
-
   const lowStockCount = items.filter(i => (i.quantity || 0) <= (i.minQuantity || 0)).length;
 
-  if (loading) return <div className="p-10 text-center">Cargando despensa...</div>;
+  if (loading) return <div className="p-10 text-center">🔄 Cargando despensa...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-24">
-      
       {/* HEADER */}
       <header className="bg-emerald-600 text-white p-4 shadow-lg sticky top-0 z-10 rounded-b-xl">
         <div className="max-w-md mx-auto">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Package className="w-6 h-6" />
-              Mi Despensa
+              📦 Mi Despensa
             </h1>
             <button 
               onClick={copyShoppingList}
               className="bg-white text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold shadow-md flex items-center gap-2 active:scale-95 transition-transform"
             >
-              <Share2 className="w-4 h-4" />
-              COPIAR
+              📋 COPIAR LISTA
             </button>
           </div>
 
           <div className="relative">
-            <Search className="absolute left-3 top-3 w-5 h-5 text-emerald-200" />
+            <span className="absolute left-3 top-3 text-emerald-200">🔍</span>
             <input 
               type="text" 
               placeholder="Buscar..." 
@@ -267,14 +243,13 @@ export default function App() {
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL */}
+      {/* CONTENIDO */}
       <main className="max-w-md mx-auto p-4">
-        
         {activeTab === 'list' && (
           <>
             {lowStockCount > 0 && (
               <div className="mb-4 bg-red-100 border border-red-200 text-red-800 p-3 rounded-lg flex items-center gap-2 animate-pulse">
-                <AlertCircle className="w-5 h-5" />
+                <span>⚠️</span>
                 <span className="text-sm font-medium">{lowStockCount} por agotarse.</span>
               </div>
             )}
@@ -298,7 +273,6 @@ export default function App() {
           </>
         )}
 
-        {/* FORMULARIO */}
         {activeTab === 'add' && (
           <div className="animate-in fade-in slide-in-from-bottom-4">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
@@ -359,7 +333,6 @@ export default function App() {
             </div>
           </div>
         )}
-
       </main>
 
       {/* FAB - BOTÓN FLOTANTE */}
@@ -370,13 +343,12 @@ export default function App() {
               onClick={() => setActiveTab('add')}
               className="bg-emerald-600 text-white p-4 rounded-full shadow-xl hover:bg-emerald-700 active:scale-90 transition-all flex items-center gap-2"
             >
-              <Plus className="w-6 h-6" />
+              <span className="text-xl">➕</span>
               <span className="font-bold pr-1">AGREGAR</span>
             </button>
           )}
         </div>
       </div>
-
     </div>
   );
 }
