@@ -154,11 +154,20 @@ export default function PantryApp() {
         }));
         // Ordenar: Primero los que urgen comprar (stock bajo), luego alfabéticamente
         list.sort((a, b) => {
-          const aLow = a.quantity <= a.minQuantity;
-          const bLow = b.quantity <= b.minQuantity;
+          // Protegemos los datos: si no tienen cantidad o nombre, usamos valores por defecto
+          const qtyA = a.quantity || 0;
+          const qtyB = b.quantity || 0;
+          const minA = a.minQuantity || 0;
+          const minB = b.minQuantity || 0;
+          const nameA = (a.name || '').toString(); // Forzamos a que sea texto
+          const nameB = (b.name || '').toString();
+  
+          const aLow = qtyA <= minA;
+          const bLow = qtyB <= minB;
+  
           if (aLow && !bLow) return -1;
           if (!aLow && bLow) return 1;
-          return a.name.localeCompare(b.name);
+          return nameA.localeCompare(nameB);
         });
 
         setItems(list);
