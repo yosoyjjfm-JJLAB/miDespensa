@@ -25,7 +25,7 @@ const firebaseConfig = {
   projectId: "seguimientoproyectos-a9644",
   storageBucket: "seguimientoproyectos-a9644.firebasestorage.app",
   messagingSenderId: "904852309784",
-  appId: "1:904852309784:web:7f5b2e811df62ce534406d"
+  appId: "1:904852309784:web:de5db2f0b3836e5334406d"
 };
 
 // --- INICIALIZACIÓN SEGURA ---
