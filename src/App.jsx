@@ -118,7 +118,7 @@ export default function PantryApp() {
   // Estados para nuevo item
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState(1);
-  const [newMin, setNewMin] = useState(2); // Alerta si baja de 2
+  const [newMin, setNewMin] = useState(2);
 
   // Autenticación Anónima
   useEffect(() => {
@@ -127,7 +127,10 @@ export default function PantryApp() {
     );
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) setLoading(false);
+      // Si no hay usuario, seguimos cargando hasta que el login anónimo responda
+      if (currentUser) {
+        // Usuario listo
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -136,14 +139,9 @@ export default function PantryApp() {
   useEffect(() => {
     if (!user) return;
 
-    // Referencia a la colección
-    const pantryRef = collection(
-      db,
-      'artifacts',
-      appId,
-      'public',
-      'pantry_items'
-    );
+    // CORRECCIÓN AQUÍ: Quitamos 'public' para que la ruta sea válida (3 partes)
+    // artifacts -> appId -> pantry_items
+    const pantryRef = collection(db, 'artifacts', appId, 'pantry_items');
 
     const unsubscribe = onSnapshot(
       pantryRef,
@@ -152,7 +150,7 @@ export default function PantryApp() {
           id: doc.id,
           ...doc.data(),
         }));
-        // Ordenar: Primero los que urgen comprar (stock bajo), luego alfabéticamente
+        // Ordenar
         list.sort((a, b) => {
           const aLow = a.quantity <= a.minQuantity;
           const bLow = b.quantity <= b.minQuantity;
@@ -164,7 +162,10 @@ export default function PantryApp() {
         setItems(list);
         setLoading(false);
       },
-      (error) => console.error(error)
+      (error) => {
+        console.error("Error leyendo datos:", error);
+        setLoading(false); // Deja de cargar si hay error
+      }
     );
 
     return () => unsubscribe();
@@ -177,19 +178,17 @@ export default function PantryApp() {
     if (!newName.trim()) return;
 
     try {
-      await addDoc(
-        collection(db, 'artifacts', appId, 'public', 'pantry_items'),
-        {
-          name: newName,
-          quantity: parseInt(newQty),
-          minQuantity: parseInt(newMin),
-          createdAt: serverTimestamp(),
-        }
-      );
+      // CORRECCIÓN AQUÍ TAMBIÉN: Ruta de 3 partes
+      await addDoc(collection(db, 'artifacts', appId, 'pantry_items'), {
+        name: newName,
+        quantity: parseInt(newQty),
+        minQuantity: parseInt(newMin),
+        createdAt: serverTimestamp(),
+      });
       setNewName('');
       setNewQty(1);
       setNewMin(2);
-      setActiveTab('list'); // Volver a la lista
+      setActiveTab('list');
     } catch (error) {
       alert('Error al agregar: ' + error.message);
     }
@@ -198,12 +197,10 @@ export default function PantryApp() {
   const updateQuantity = async (id, newQuantity) => {
     if (newQuantity < 0) return;
     try {
-      await updateDoc(
-        doc(db, 'artifacts', appId, 'public', 'pantry_items', id),
-        {
-          quantity: newQuantity,
-        }
-      );
+      // CORRECCIÓN AQUÍ: Ruta de 4 partes (Col/Doc/Col/Doc)
+      await updateDoc(doc(db, 'artifacts', appId, 'pantry_items', id), {
+        quantity: newQuantity,
+      });
     } catch (error) {
       console.error(error);
     }
@@ -211,25 +208,22 @@ export default function PantryApp() {
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este producto de la despensa?')) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'pantry_items', id));
+    // CORRECCIÓN AQUÍ
+    await deleteDoc(doc(db, 'artifacts', appId, 'pantry_items', id));
   };
 
-  // Generar Lista de Compras
   const copyShoppingList = () => {
     const toBuy = items.filter((i) => i.quantity <= i.minQuantity);
-
     if (toBuy.length === 0) {
       alert('¡Todo está bien surtido! No hace falta comprar nada.');
       return;
     }
-
     let text = '🛒 *LISTA DE COMPRAS - CASA*\n\n';
     toBuy.forEach((item) => {
-      const missing = item.minQuantity - item.quantity + 1; // Sugerir comprar para superar el mínimo
+      const missing = item.minQuantity - item.quantity + 1;
       text += `[ ] ${item.name} (Faltan aprox: ${missing})\n`;
     });
     text += `\nGenerado el: ${new Date().toLocaleDateString()}`;
-
     navigator.clipboard.writeText(text).then(() => {
       alert('📋 ¡Lista copiada! Pégala en WhatsApp.');
     });
@@ -242,7 +236,7 @@ export default function PantryApp() {
   const lowStockCount = items.filter((i) => i.quantity <= i.minQuantity).length;
 
   if (loading)
-    return <div className="p-10 text-center">Cargando despensa...</div>;
+    return <div className="p-10 text-center font-bold text-slate-500">Cargando despensa...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-24">
@@ -262,13 +256,11 @@ export default function PantryApp() {
               COPIAR LISTA
             </button>
           </div>
-
-          {/* Buscador */}
           <div className="relative">
             <Search className="absolute left-3 top-3 w-5 h-5 text-emerald-200" />
             <input
               type="text"
-              placeholder="Buscar producto (ej. Arroz)..."
+              placeholder="Buscar..."
               className="w-full bg-emerald-700/50 border border-emerald-500 text-white placeholder-emerald-200 rounded-lg py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-white/50"
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
@@ -277,24 +269,23 @@ export default function PantryApp() {
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL */}
+      {/* CONTENIDO */}
       <main className="max-w-md mx-auto p-4">
         {activeTab === 'list' && (
           <>
-            {/* Resumen de alertas */}
             {lowStockCount > 0 && (
               <div className="mb-4 bg-red-100 border border-red-200 text-red-800 p-3 rounded-lg flex items-center gap-2 animate-pulse">
                 <AlertCircle className="w-5 h-5" />
                 <span className="text-sm font-medium">
-                  Hay {lowStockCount} productos por agotarse.
+                  ¡Atención! {lowStockCount} productos por agotarse.
                 </span>
               </div>
             )}
-
             <div className="space-y-3">
               {filteredItems.length === 0 ? (
                 <div className="text-center py-10 text-slate-400">
-                  <p>No se encontraron productos.</p>
+                  <p>No hay productos aquí.</p>
+                  <button onClick={() => setActiveTab('add')} className="text-emerald-600 underline mt-2">¡Agrega el primero!</button>
                 </div>
               ) : (
                 filteredItems.map((item) => (
@@ -314,29 +305,22 @@ export default function PantryApp() {
         {activeTab === 'add' && (
           <div className="animate-in fade-in slide-in-from-bottom-4">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-              <h2 className="text-xl font-bold mb-4 text-emerald-700">
-                Nuevo Producto
-              </h2>
+              <h2 className="text-xl font-bold mb-4 text-emerald-700">Nuevo Producto</h2>
               <form onSubmit={handleAddItem} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Nombre del producto
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
                   <input
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Ej. Leche, Detergente..."
+                    placeholder="Ej. Huevos"
                     className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                     autoFocus
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Cantidad Actual
-                    </label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Cantidad</label>
                     <input
                       type="number"
                       min="0"
@@ -346,9 +330,7 @@ export default function PantryApp() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Avisar si baja de
-                    </label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Mínimo</label>
                     <input
                       type="number"
                       min="1"
@@ -358,26 +340,9 @@ export default function PantryApp() {
                     />
                   </div>
                 </div>
-
-                <p className="text-xs text-slate-500">
-                  * La app te avisará cuando tengas {newMin} o menos unidades.
-                </p>
-
                 <div className="pt-2 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('list')}
-                    className="flex-1 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!newName.trim()}
-                    className="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                  >
-                    Guardar
-                  </button>
+                  <button type="button" onClick={() => setActiveTab('list')} className="flex-1 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-lg">Cancelar</button>
+                  <button type="submit" disabled={!newName.trim()} className="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-emerald-700 disabled:opacity-50">Guardar</button>
                 </div>
               </form>
             </div>
@@ -385,7 +350,7 @@ export default function PantryApp() {
         )}
       </main>
 
-      {/* MENÚ FLOTANTE INFERIOR */}
+      {/* BOTÓN FLOTANTE */}
       <div className="fixed bottom-6 left-0 right-0 z-20 pointer-events-none">
         <div className="max-w-md mx-auto px-6 flex justify-end pointer-events-auto">
           {activeTab === 'list' && (
