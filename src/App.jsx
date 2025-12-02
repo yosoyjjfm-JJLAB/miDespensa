@@ -112,7 +112,7 @@ export default function PantryApp() {
   const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('list'); // 'list' | 'add'
+  const [activeTab, setActiveTab] = useState('list');
   const [filterText, setFilterText] = useState('');
 
   // Estados para nuevo item
@@ -127,7 +127,6 @@ export default function PantryApp() {
     );
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      // Si no hay usuario, seguimos cargando hasta que el login anónimo responda
       if (currentUser) {
         // Usuario listo
       }
@@ -139,8 +138,7 @@ export default function PantryApp() {
   useEffect(() => {
     if (!user) return;
 
-    // CORRECCIÓN AQUÍ: Quitamos 'public' para que la ruta sea válida (3 partes)
-    // artifacts -> appId -> pantry_items
+    // Ruta corregida: artifacts -> appId -> pantry_items
     const pantryRef = collection(db, 'artifacts', appId, 'pantry_items');
 
     const unsubscribe = onSnapshot(
@@ -164,7 +162,7 @@ export default function PantryApp() {
       },
       (error) => {
         console.error("Error leyendo datos:", error);
-        setLoading(false); // Deja de cargar si hay error
+        setLoading(false);
       }
     );
 
@@ -178,7 +176,6 @@ export default function PantryApp() {
     if (!newName.trim()) return;
 
     try {
-      // CORRECCIÓN AQUÍ TAMBIÉN: Ruta de 3 partes
       await addDoc(collection(db, 'artifacts', appId, 'pantry_items'), {
         name: newName,
         quantity: parseInt(newQty),
@@ -197,7 +194,6 @@ export default function PantryApp() {
   const updateQuantity = async (id, newQuantity) => {
     if (newQuantity < 0) return;
     try {
-      // CORRECCIÓN AQUÍ: Ruta de 4 partes (Col/Doc/Col/Doc)
       await updateDoc(doc(db, 'artifacts', appId, 'pantry_items', id), {
         quantity: newQuantity,
       });
@@ -208,7 +204,6 @@ export default function PantryApp() {
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este producto de la despensa?')) return;
-    // CORRECCIÓN AQUÍ
     await deleteDoc(doc(db, 'artifacts', appId, 'pantry_items', id));
   };
 
@@ -258,6 +253,8 @@ export default function PantryApp() {
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-3 w-5 h-5 text-emerald-200" />
+            
+            {/* AQUÍ ESTÁ EL CAMBIO: text-white en el input del buscador */}
             <input
               type="text"
               placeholder="Buscar..."
@@ -309,12 +306,13 @@ export default function PantryApp() {
               <form onSubmit={handleAddItem} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                  {/* AQUÍ ASEGURAMOS FONDO BLANCO Y TEXTO OSCURO */}
                   <input
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Ej. Huevos"
-                    className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    className="w-full p-3 bg-white text-slate-900 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                     autoFocus
                   />
                 </div>
@@ -326,7 +324,7 @@ export default function PantryApp() {
                       min="0"
                       value={newQty}
                       onChange={(e) => setNewQty(e.target.value)}
-                      className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                      className="w-full p-3 bg-white text-slate-900 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                     />
                   </div>
                   <div>
@@ -336,7 +334,7 @@ export default function PantryApp() {
                       min="1"
                       value={newMin}
                       onChange={(e) => setNewMin(e.target.value)}
-                      className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-red-50"
+                      className="w-full p-3 bg-red-50 text-slate-900 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                     />
                   </div>
                 </div>
